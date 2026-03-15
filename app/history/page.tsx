@@ -15,7 +15,9 @@ export default function HistoryPage() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch("/api/history");
+        // Provide absolute URL during local dev to avoid proxy timeout bug
+        const apiUrl = process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api/history" : "/api/history";
+        const res = await fetch(apiUrl);
         if (!res.ok) throw new Error("Gagal mengambil data dari server.");
         const data = await res.json();
         setHistory(data);

@@ -47,7 +47,8 @@ export default function PredictPage() {
         blood_glucose_level: parseFloat(formData.blood_glucose_level)
       };
 
-      const res = await fetch("/api/predict", {
+      const apiUrl = process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api/predict" : "/api/predict";
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
