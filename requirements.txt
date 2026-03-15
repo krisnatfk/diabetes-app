@@ -1,0 +1,9 @@
+kagglehub[pandas-datasets]
+pandas
+numpy
+scikit-learn
+joblib
+fastapi
+uvicorn
+supabase
+pydantic

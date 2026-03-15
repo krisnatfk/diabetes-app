@@ -1,0 +1,9 @@
+﻿========================================================================
+  DESKRIPSI                           PROB     HASIL
+========================================================================
+  Sangat Sehat (Muda, Normal)              0.0%   NORMAL
+  Agak Berisiko (BMI+HbA1c naik)           3.0%   NORMAL
+  Menengah (Pre-diabetes)                 19.0%   NORMAL
+  Cukup Tinggi                            97.0%   DIABETES
+  Sangat Tinggi (Semua buruk)            100.0%   DIABETES
+========================================================================
