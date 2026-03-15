@@ -280,7 +280,7 @@ export default function ResultPage() {
                         { label: "Usia", value: `${input.age} Tahun` },
                         { label: "Riwayat Hipertensi", value: input.hypertension === 1 ? "Ya" : "Tidak" },
                         { label: "Riwayat Penyakit Jantung", value: input.heart_disease === 1 ? "Ya" : "Tidak" },
-                        { label: "Riwayat Merokok", value: { never: "Tidak Pernah", current: "Aktif", former: "Mantan Perokok", ever: "Pernah", "not current": "Tidak Saat Ini", "No Info": "Tidak Ada Info" }[input.smoking_history] || input.smoking_history },
+                        { label: "Riwayat Merokok", value: ({ never: "Tidak Pernah", current: "Aktif", former: "Mantan Perokok", ever: "Pernah", "not current": "Tidak Saat Ini", "No Info": "Tidak Ada Info" } as Record<string, string>)[input.smoking_history] || input.smoking_history },
                         { label: "Indeks Massa Tubuh", value: `${input.bmi} kg/m²` },
                         { label: "Kadar HbA1c", value: `${input.HbA1c_level}%` },
                         { label: "Glukosa Darah", value: `${input.blood_glucose_level} mg/dL` },

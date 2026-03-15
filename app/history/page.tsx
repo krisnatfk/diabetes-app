@@ -15,7 +15,7 @@ export default function HistoryPage() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch("http://localhost:8000/history");
+        const res = await fetch("/api/history");
         if (!res.ok) throw new Error("Gagal mengambil data dari server.");
         const data = await res.json();
         setHistory(data);

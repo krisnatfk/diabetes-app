@@ -70,11 +70,11 @@ class HealthDataInput(BaseModel):
     HbA1c_level: float
     blood_glucose_level: float
 
-@app.get("/")
+@app.get("/api/")
 def read_root():
     return {"status": "ok", "message": "Diabetes Prediction API is running."}
 
-@app.post("/predict")
+@app.post("/api/predict")
 def predict_diabetes(data: HealthDataInput):
     load_ml_assets() # Ensure models are loaded if they weren't at startup
     if not model:
@@ -129,7 +129,7 @@ def predict_diabetes(data: HealthDataInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/history")
+@app.get("/api/history")
 def get_prediction_history():
     if not supabase:
         raise HTTPException(status_code=500, detail="Database Supabase tidak terhubung.")
