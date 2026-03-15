@@ -54,8 +54,14 @@ export default function PredictPage() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Terjadi kesalahan saat memproses prediksi.");
+        let errorMessage = "Terjadi kesalahan pada server saat memproses prediksi.";
+        try {
+          const errData = await res.json();
+          errorMessage = errData.detail || errorMessage;
+        } catch (parseError) {
+          errorMessage = "Gagal menghubungi server API. Pastikan server backend FastAPI berjalan.";
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await res.json();

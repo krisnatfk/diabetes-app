@@ -23,10 +23,11 @@ app.add_middleware(
 )
 
 # Load models and encoders
-MODEL_PATH = "models/model.pkl"
-SCALER_PATH = "models/scaler.pkl"
-GENDER_ENCODER_PATH = "models/gender_encoder.pkl"
-SMOKING_ENCODER_PATH = "models/smoking_encoder.pkl"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
+SCALER_PATH = os.path.join(BASE_DIR, "models", "scaler.pkl")
+GENDER_ENCODER_PATH = os.path.join(BASE_DIR, "models", "gender_encoder.pkl")
+SMOKING_ENCODER_PATH = os.path.join(BASE_DIR, "models", "smoking_encoder.pkl")
 
 # Initialize them as None, they will be loaded on first request or startup
 model = None
