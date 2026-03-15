@@ -15,8 +15,9 @@ export default function HistoryPage() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        // Provide absolute URL during local dev to avoid proxy timeout bug
-        const apiUrl = process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api/history" : "/api/history";
+        // Use direct URL in local dev, relative path in Vercel production
+        const isDev = typeof window !== "undefined" && window.location.hostname === "localhost";
+        const apiUrl = isDev ? "http://127.0.0.1:8000/api/history" : "/api/history";
         const res = await fetch(apiUrl);
         if (!res.ok) throw new Error("Gagal mengambil data dari server.");
         const data = await res.json();

@@ -5,11 +5,14 @@ from pydantic import BaseModel
 import joblib
 import pandas as pd
 from supabase import create_client, Client
-from dotenv import load_dotenv
 
-# Load env variables (for supabase) — tries .env first, then .env.local
-load_dotenv(".env")
-load_dotenv(".env.local")
+# Load env variables — on Vercel, env vars are injected automatically
+try:
+    from dotenv import load_dotenv
+    load_dotenv(".env")
+    load_dotenv(".env.local")
+except ImportError:
+    pass  # dotenv not needed on Vercel, env vars are injected directly
 
 app = FastAPI(title="Diabetes Prediction API")
 
