@@ -15,7 +15,6 @@ export default function HistoryPage() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        // Use direct URL in local dev, relative path in Vercel production
         const isDev = typeof window !== "undefined" && window.location.hostname === "localhost";
         const apiUrl = isDev ? "http://127.0.0.1:8000/api/history" : "/api/history";
         const res = await fetch(apiUrl);
@@ -35,8 +34,8 @@ export default function HistoryPage() {
     const search = searchTerm.toLowerCase();
     return (
       item.prediction?.toLowerCase().includes(search) ||
-      item.gender?.toLowerCase().includes(search) ||
-      String(item.age).includes(search)
+      String(item.Age).includes(search) ||
+      String(item.BMI).includes(search)
     );
   });
 
@@ -74,13 +73,13 @@ export default function HistoryPage() {
                 </div>
               ) : error ? (
                 <div className="p-8 text-center">
-                  <div className="text-4xl mb-3">⚠️</div>
+                  <div className="text-4xl mb-3">&#x26A0;&#xFE0F;</div>
                   <p className="text-red-600 font-medium">{error}</p>
                   <p className="text-sm text-slate-400 mt-1">Pastikan server backend FastAPI sudah berjalan.</p>
                 </div>
               ) : filteredHistory.length === 0 ? (
                 <div className="text-center py-16">
-                  <div className="text-5xl mb-3">📋</div>
+                  <div className="text-5xl mb-3">&#x1F4CB;</div>
                   <p className="text-slate-600 font-medium">Belum ada riwayat prediksi.</p>
                   <p className="text-sm text-slate-400 mt-1">Data prediksi akan muncul di sini setelah Anda melakukan skrining.</p>
                 </div>
@@ -90,11 +89,11 @@ export default function HistoryPage() {
                     <thead>
                       <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-slate-100 bg-slate-50/50">
                         <th className="px-5 py-3 text-left font-semibold">Waktu</th>
-                        <th className="px-5 py-3 text-left font-semibold">Gender</th>
                         <th className="px-5 py-3 text-left font-semibold">Usia</th>
                         <th className="px-5 py-3 text-left font-semibold">BMI</th>
                         <th className="px-5 py-3 text-left font-semibold">HbA1c</th>
                         <th className="px-5 py-3 text-left font-semibold">Glukosa</th>
+                        <th className="px-5 py-3 text-left font-semibold">Keluarga</th>
                         <th className="px-5 py-3 text-left font-semibold">Risiko</th>
                         <th className="px-5 py-3 text-left font-semibold">Hasil</th>
                       </tr>
@@ -111,11 +110,19 @@ export default function HistoryPage() {
                           <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">
                             {new Date(item.created_at).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </td>
-                          <td className="px-5 py-3.5 text-slate-600">{item.gender}</td>
-                          <td className="px-5 py-3.5 text-slate-700 font-medium">{item.age}</td>
-                          <td className="px-5 py-3.5 text-slate-700">{item.bmi}</td>
-                          <td className="px-5 py-3.5 text-slate-700">{item.HbA1c_level}</td>
-                          <td className="px-5 py-3.5 text-slate-700">{item.blood_glucose_level}</td>
+                          <td className="px-5 py-3.5 text-slate-700 font-medium">{item.Age}</td>
+                          <td className="px-5 py-3.5 text-slate-700">{item.BMI?.toFixed?.(1) || item.BMI}</td>
+                          <td className="px-5 py-3.5 text-slate-700">{item.HbA1c?.toFixed?.(1) || item.HbA1c}</td>
+                          <td className="px-5 py-3.5 text-slate-700">{item.FastingBloodSugar?.toFixed?.(0) || item.FastingBloodSugar}</td>
+                          <td className="px-5 py-3.5 text-slate-700">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              item.FamilyHistoryDiabetes === 1
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-slate-50 text-slate-600 border border-slate-200"
+                            }`}>
+                              {item.FamilyHistoryDiabetes === 1 ? "Ya" : "Tidak"}
+                            </span>
+                          </td>
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2">
                               <div className={`h-2 w-2 rounded-full ${item.prediction === "Diabetes" ? "bg-red-400" : "bg-emerald-400"}`} />

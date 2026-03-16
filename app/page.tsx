@@ -19,9 +19,9 @@ const fadeInUp = {
 };
 
 const stats = [
-  { value: "100K+", label: "Data Rekam Medis", icon: Users },
-  { value: "97%", label: "Akurasi Model", icon: TrendingUp },
-  { value: "3", label: "Algoritma ML", icon: Brain },
+  { value: "28", label: "Parameter Kesehatan", icon: Users },
+  { value: "94%", label: "Akurasi Model", icon: TrendingUp },
+  { value: "5", label: "Tahap Skrining", icon: Brain },
   { value: "<1s", label: "Waktu Prediksi", icon: Clock },
 ];
 
@@ -29,7 +29,7 @@ const features = [
   {
     icon: Activity,
     title: "Akurasi Tinggi",
-    desc: "Model Random Forest dilatih dengan 100.000+ data rekam medis pasien untuk memberikan prediksi yang sangat akurat dan terpercaya.",
+    desc: "Model Gradient Boosting dilatih dengan data klinis komprehensif mencakup 28 parameter kesehatan untuk memberikan prediksi yang sangat akurat.",
     color: "from-sky-500 to-blue-600",
     bgColor: "bg-sky-50",
   },
@@ -110,7 +110,7 @@ export default function Home() {
               </h1>
 
               <p className="text-lg text-slate-300 max-w-lg leading-relaxed">
-                Platform Clinical Decision Support System yang menganalisis 8 parameter kesehatan Anda menggunakan algoritma Random Forest untuk memprediksi risiko diabetes secara akurat dan instan.
+                Platform Clinical Decision Support System yang menganalisis 28 parameter kesehatan dalam 5 tahap skrining menggunakan algoritma Gradient Boosting untuk memprediksi risiko diabetes secara akurat.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -269,13 +269,13 @@ export default function Home() {
               {
                 step: "01",
                 title: "Input Data Kesehatan",
-                desc: "Masukkan 8 parameter kesehatan Anda seperti usia, BMI, HbA1c, dan glukosa darah melalui formulir interaktif.",
+                desc: "Isi 28 parameter kesehatan dalam 5 tahap: demografi, riwayat medis, data klinis, gaya hidup, dan gejala.",
                 icon: "📝",
               },
               {
                 step: "02",
                 title: "Analisis AI",
-                desc: "Model Random Forest memproses data Anda dan menghitung probabilitas risiko diabetes dalam hitungan detik.",
+                desc: "Model Gradient Boosting (94% akurasi) memproses data Anda dan menghitung probabilitas risiko diabetes dalam hitungan detik.",
                 icon: "🤖",
               },
               {

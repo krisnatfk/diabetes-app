@@ -2,40 +2,67 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-  RadialBarChart, RadialBar, Legend
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  RadialBarChart, RadialBar,
+  Tooltip as RechartsTooltip,
 } from "recharts";
 import {
   AlertTriangle, CheckCircle, ArrowLeft, Activity,
-  Heart, Droplets, Scale, Cigarette, HeartPulse,
-  ClipboardList, Stethoscope, TrendingUp, Info
+  Heart, Droplets, Scale, HeartPulse,
+  ClipboardList, Stethoscope, TrendingUp, Info,
+  Dna, FlaskConical, Dumbbell, AlertCircle, User, Shield
 } from "lucide-react";
 
-// Reference ranges for health indicators
-const healthRanges = {
-  bmi: { low: 18.5, normal: 24.9, high: 29.9, label: "BMI" },
-  HbA1c_level: { low: 4.0, normal: 5.6, high: 6.4, label: "HbA1c (%)" },
-  blood_glucose_level: { low: 70, normal: 99, high: 125, label: "Glukosa (mg/dL)" },
+// ─── Risk level colors & labels ─────────────────────────────────
+const RISK_COLORS: Record<string, { bg: string; text: string; border: string; fill: string }> = {
+  high: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", fill: "#ef4444" },
+  medium: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", fill: "#f59e0b" },
+  low: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", fill: "#10b981" },
 };
 
-function getIndicatorStatus(key: string, value: number) {
-  const range = healthRanges[key as keyof typeof healthRanges];
-  if (!range) return { status: "unknown", color: "slate", label: "Tidak Diketahui" };
-  if (value <= range.normal) return { status: "normal", color: "emerald", label: "Normal" };
-  if (value <= range.high) return { status: "warning", color: "amber", label: "Perhatian" };
-  return { status: "danger", color: "red", label: "Tinggi" };
-}
+const RISK_LABELS: Record<string, string> = {
+  high: "Tinggi",
+  medium: "Sedang",
+  low: "Rendah",
+};
 
-function getBarWidth(key: string, value: number) {
-  const maxValues: Record<string, number> = { bmi: 50, HbA1c_level: 14, blood_glucose_level: 300 };
-  const max = maxValues[key] || 100;
-  return Math.min((value / max) * 100, 100);
+const CATEGORY_ICONS: Record<string, any> = {
+  genetic: Dna,
+  clinical: FlaskConical,
+  lifestyle: Dumbbell,
+  symptoms: AlertCircle,
+  demographic: User,
+};
+
+// ─── Health indicator helpers ───────────────────────────────────
+function getIndicatorStatus(key: string, value: number) {
+  const ranges: Record<string, { normal: number; high: number }> = {
+    BMI: { normal: 24.9, high: 29.9 },
+    HbA1c: { normal: 5.6, high: 6.4 },
+    FastingBloodSugar: { normal: 99, high: 125 },
+    SystolicBP: { normal: 120, high: 140 },
+    DiastolicBP: { normal: 80, high: 90 },
+    CholesterolTotal: { normal: 200, high: 239 },
+    CholesterolLDL: { normal: 100, high: 160 },
+    CholesterolHDL: { normal: 60, high: 100 },
+    CholesterolTriglycerides: { normal: 150, high: 200 },
+  };
+  const range = ranges[key];
+  if (!range) return { color: "emerald", label: "N/A" };
+  // HDL is special: higher is better
+  if (key === "CholesterolHDL") {
+    if (value >= 60) return { color: "emerald", label: "Baik" };
+    if (value >= 40) return { color: "amber", label: "Perhatian" };
+    return { color: "red", label: "Rendah" };
+  }
+  if (value <= range.normal) return { color: "emerald", label: "Normal" };
+  if (value <= range.high) return { color: "amber", label: "Perhatian" };
+  return { color: "red", label: "Tinggi" };
 }
 
 export default function ResultPage() {
@@ -56,23 +83,34 @@ export default function ResultPage() {
   const { input, result } = resultData;
   const probability = result.probability * 100;
   const isHighRisk = result.prediction === "Diabetes";
+  const riskFactors = result.risk_factors || {};
 
   // Chart data
   const riskChartData = [
     { name: "Risiko", value: probability },
     { name: "Aman", value: 100 - probability },
   ];
-
   const riskColors = isHighRisk ? ["#ef4444", "#f1f5f9"] : ["#10b981", "#f1f5f9"];
 
-  const indicatorsBarData = [
-    { name: "BMI", value: input.bmi, fill: getIndicatorStatus("bmi", input.bmi).color === "emerald" ? "#10b981" : getIndicatorStatus("bmi", input.bmi).color === "amber" ? "#f59e0b" : "#ef4444" },
-    { name: "HbA1c", value: input.HbA1c_level, fill: getIndicatorStatus("HbA1c_level", input.HbA1c_level).color === "emerald" ? "#10b981" : getIndicatorStatus("HbA1c_level", input.HbA1c_level).color === "amber" ? "#f59e0b" : "#ef4444" },
-    { name: "Glukosa", value: input.blood_glucose_level / 3, fill: getIndicatorStatus("blood_glucose_level", input.blood_glucose_level).color === "emerald" ? "#10b981" : getIndicatorStatus("blood_glucose_level", input.blood_glucose_level).color === "amber" ? "#f59e0b" : "#ef4444" },
-  ];
+  // Radar chart data for risk categories
+  const radarData = Object.entries(riskFactors).map(([key, val]: [string, any]) => ({
+    category: val.label.replace("Risiko ", ""),
+    score: val.score,
+    fullMark: 100,
+  }));
 
   const radialData = [
     { name: "Skor Risiko", value: probability, fill: isHighRisk ? "#ef4444" : "#10b981" },
+  ];
+
+  // Clinical indicators to display
+  const clinicalIndicators = [
+    { key: "BMI", label: "BMI", value: input.BMI, unit: "kg/m\u00B2", ref: "Normal: 18.5 - 24.9", icon: Scale },
+    { key: "HbA1c", label: "HbA1c", value: input.HbA1c, unit: "%", ref: "Normal: < 5.7%", icon: Droplets },
+    { key: "FastingBloodSugar", label: "Gula Darah Puasa", value: input.FastingBloodSugar, unit: "mg/dL", ref: "Normal: < 100", icon: Activity },
+    { key: "SystolicBP", label: "Tek. Sistolik", value: input.SystolicBP, unit: "mmHg", ref: "Normal: < 120", icon: HeartPulse },
+    { key: "CholesterolTotal", label: "Kolesterol Total", value: input.CholesterolTotal, unit: "mg/dL", ref: "Normal: < 200", icon: Heart },
+    { key: "CholesterolTriglycerides", label: "Trigliserida", value: input.CholesterolTriglycerides, unit: "mg/dL", ref: "Normal: < 150", icon: FlaskConical },
   ];
 
   return (
@@ -80,15 +118,12 @@ export default function ResultPage() {
       <div className="container mx-auto max-w-6xl px-4 lg:px-8 py-8 lg:py-12">
 
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <span className="text-sm font-semibold text-sky-600 uppercase tracking-wider">Hasil Analisis</span>
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+          <span className="text-sm font-semibold text-sky-600 uppercase tracking-wider">Hasil Analisis Komprehensif</span>
           <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-800 mt-1">
             Laporan Prediksi Risiko Diabetes
           </h1>
+          <p className="text-slate-500 mt-1 text-sm">Berdasarkan 28 parameter kesehatan dalam 5 kategori</p>
         </motion.div>
 
         {/* ─── RISK ALERT BANNER ─── */}
@@ -102,18 +137,16 @@ export default function ResultPage() {
               : "bg-gradient-to-r from-emerald-500 to-green-600 text-white"
           }`}
         >
-          <div className={`h-16 w-16 rounded-2xl flex items-center justify-center shrink-0 ${
-            isHighRisk ? "bg-white/20" : "bg-white/20"
-          }`}>
+          <div className="h-16 w-16 rounded-2xl flex items-center justify-center bg-white/20 shrink-0">
             {isHighRisk ? <AlertTriangle className="h-8 w-8" /> : <CheckCircle className="h-8 w-8" />}
           </div>
-          <div className="text-center md:text-left">
+          <div className="text-center md:text-left flex-1">
             <h2 className="text-2xl font-bold">
-              {isHighRisk ? "⚠️ Risiko Tinggi Terindikasi Diabetes" : "✅ Risiko Rendah — Tidak Terindikasi Diabetes"}
+              {isHighRisk ? "Risiko Tinggi Terindikasi Diabetes" : "Risiko Rendah - Tidak Terindikasi Diabetes"}
             </h2>
             <p className="text-white/80 mt-1">
               {isHighRisk
-                ? "Berdasarkan analisis 8 parameter kesehatan Anda, sistem mendeteksi pola yang konsisten dengan indikasi diabetes. Segera konsultasikan ke dokter."
+                ? "Berdasarkan analisis 28 parameter kesehatan Anda, sistem mendeteksi pola yang konsisten dengan indikasi diabetes. Segera konsultasikan ke dokter."
                 : "Profil kesehatan Anda saat ini menunjukkan risiko rendah terhadap diabetes. Tetap jaga pola hidup sehat."}
             </p>
           </div>
@@ -152,8 +185,32 @@ export default function ResultPage() {
             </Card>
           </motion.div>
 
-          {/* Radial Score */}
+          {/* Radar Chart - Risk Categories */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <Card className="h-full border-slate-100 shadow-md">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold text-slate-700 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-sky-500" /> Profil Risiko Multi-Dimensi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+                      <PolarGrid stroke="#e2e8f0" />
+                      <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: "#64748b" }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                      <Radar name="Skor" dataKey="score" stroke={isHighRisk ? "#ef4444" : "#10b981"} fill={isHighRisk ? "#ef4444" : "#10b981"} fillOpacity={0.3} strokeWidth={2} />
+                      <RechartsTooltip formatter={(v: any) => `${v}/100`} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Radial Score */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <Card className="h-full border-slate-100 shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold text-slate-700 flex items-center gap-2">
@@ -177,57 +234,66 @@ export default function ResultPage() {
               </CardContent>
             </Card>
           </motion.div>
+        </div>
 
-          {/* Bar Chart - Indicators */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <Card className="h-full border-slate-100 shadow-md">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold text-slate-700 flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4 text-sky-500" /> Indikator Utama
+        {/* ─── RISK FACTOR CATEGORIES ─── */}
+        {Object.keys(riskFactors).length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+            <Card className="mb-8 border-slate-100 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Dna className="h-5 w-5 text-sky-500" /> Analisis Risiko Per Kategori
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={indicatorsBarData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis type="number" tick={{ fontSize: 11 }} />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={60} />
-                      <RechartsTooltip />
-                      <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
-                        {indicatorsBarData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(riskFactors).map(([key, val]: [string, any]) => {
+                    const Icon = CATEGORY_ICONS[key] || Shield;
+                    const colors = RISK_COLORS[val.level] || RISK_COLORS.low;
+                    return (
+                      <div key={key} className={`rounded-xl border ${colors.border} ${colors.bg} p-4`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Icon className={`h-4 w-4 ${colors.text}`} />
+                            <span className="text-sm font-semibold text-slate-700">{val.label}</span>
+                          </div>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text} border ${colors.border}`}>
+                            {RISK_LABELS[val.level]}
+                          </span>
+                        </div>
+                        <div className="h-2 bg-white/60 rounded-full overflow-hidden mb-1">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{ width: `${val.score}%`, backgroundColor: colors.fill }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-500 text-right">{val.score}/100</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
           </motion.div>
-        </div>
+        )}
 
-        {/* ─── HEALTH INDICATOR DETAIL ─── */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+        {/* ─── CLINICAL INDICATORS ─── */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
           <Card className="mb-8 border-slate-100 shadow-md">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <HeartPulse className="h-5 w-5 text-sky-500" /> Detail Indikator Kesehatan Anda
+                <HeartPulse className="h-5 w-5 text-sky-500" /> Detail Indikator Kesehatan
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { key: "bmi", icon: Scale, label: "Indeks Massa Tubuh (BMI)", value: input.bmi, unit: "kg/m²", ref: "Normal: 18.5 – 24.9" },
-                  { key: "HbA1c_level", icon: Droplets, label: "Kadar HbA1c", value: input.HbA1c_level, unit: "%", ref: "Normal: < 5.7%" },
-                  { key: "blood_glucose_level", icon: Activity, label: "Glukosa Darah", value: input.blood_glucose_level, unit: "mg/dL", ref: "Normal: 70 – 99 mg/dL" },
-                  { key: "age", icon: Heart, label: "Usia Pasien", value: input.age, unit: "Tahun", ref: "Risiko meningkat > 45 tahun" },
-                ].map((item) => {
-                  const status = item.key !== "age" ? getIndicatorStatus(item.key, item.value) : (input.age > 45 ? { color: "amber", label: "Lanjut Usia" } : { color: "emerald", label: "Muda" });
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {clinicalIndicators.map((item) => {
+                  const status = getIndicatorStatus(item.key, item.value);
                   const colorMap: Record<string, string> = {
                     emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
                     amber: "bg-amber-50 text-amber-700 border-amber-200",
                     red: "bg-red-50 text-red-700 border-red-200",
                   };
-
                   return (
                     <div key={item.key} className="rounded-xl border border-slate-100 p-4 hover:shadow-sm transition">
                       <div className="flex items-center justify-between mb-3">
@@ -243,16 +309,6 @@ export default function ResultPage() {
                         {item.value} <span className="text-sm font-normal text-slate-400">{item.unit}</span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-1">{item.ref}</p>
-                      {item.key !== "age" && (
-                        <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ${
-                              status.color === "emerald" ? "bg-emerald-400" : status.color === "amber" ? "bg-amber-400" : "bg-red-400"
-                            }`}
-                            style={{ width: `${getBarWidth(item.key, item.value)}%` }}
-                          />
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -264,7 +320,7 @@ export default function ResultPage() {
         {/* ─── PATIENT SUMMARY & RECOMMENDATIONS ─── */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           {/* Patient Summary */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
             <Card className="h-full border-slate-100 shadow-md">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -276,14 +332,17 @@ export default function ResultPage() {
                   <table className="w-full text-sm">
                     <tbody className="divide-y divide-slate-100">
                       {[
-                        { label: "Jenis Kelamin", value: input.gender === "Male" ? "Laki-laki" : input.gender === "Female" ? "Perempuan" : "Lainnya" },
-                        { label: "Usia", value: `${input.age} Tahun` },
-                        { label: "Riwayat Hipertensi", value: input.hypertension === 1 ? "Ya" : "Tidak" },
-                        { label: "Riwayat Penyakit Jantung", value: input.heart_disease === 1 ? "Ya" : "Tidak" },
-                        { label: "Riwayat Merokok", value: ({ never: "Tidak Pernah", current: "Aktif", former: "Mantan Perokok", ever: "Pernah", "not current": "Tidak Saat Ini", "No Info": "Tidak Ada Info" } as Record<string, string>)[input.smoking_history] || input.smoking_history },
-                        { label: "Indeks Massa Tubuh", value: `${input.bmi} kg/m²` },
-                        { label: "Kadar HbA1c", value: `${input.HbA1c_level}%` },
-                        { label: "Glukosa Darah", value: `${input.blood_glucose_level} mg/dL` },
+                        { label: "Jenis Kelamin", value: input.Gender === 1 ? "Laki-laki" : "Perempuan" },
+                        { label: "Usia", value: `${input.Age} Tahun` },
+                        { label: "BMI", value: `${input.BMI} kg/m\u00B2` },
+                        { label: "Riwayat Diabetes Keluarga", value: input.FamilyHistoryDiabetes === 1 ? "Ya" : "Tidak" },
+                        { label: "Hipertensi", value: input.Hypertension === 1 ? "Ya" : "Tidak" },
+                        { label: "HbA1c", value: `${input.HbA1c}%` },
+                        { label: "Gula Darah Puasa", value: `${input.FastingBloodSugar} mg/dL` },
+                        { label: "Tekanan Darah", value: `${input.SystolicBP}/${input.DiastolicBP} mmHg` },
+                        { label: "Kolesterol Total", value: `${input.CholesterolTotal} mg/dL` },
+                        { label: "Merokok", value: input.Smoking === 1 ? "Ya" : "Tidak" },
+                        { label: "Aktivitas Fisik", value: `${input.PhysicalActivity} jam/minggu` },
                       ].map((row) => (
                         <tr key={row.label}>
                           <td className="py-2.5 text-slate-500 font-medium">{row.label}</td>
@@ -298,7 +357,7 @@ export default function ResultPage() {
           </motion.div>
 
           {/* Recommendations */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
             <Card className="h-full border-slate-100 shadow-md">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -309,18 +368,25 @@ export default function ResultPage() {
                 <div className="space-y-3">
                   {isHighRisk ? (
                     <>
-                      <RecommendationItem icon="🏥" title="Konsultasi Dokter" desc="Segera jadwalkan konsultasi dengan dokter spesialis endokrinologi untuk pemeriksaan lebih lanjut dan validasi diagnosis klinis." priority="urgent" />
-                      <RecommendationItem icon="🩸" title="Monitoring Glukosa" desc="Lakukan pemeriksaan glukosa darah puasa dan tes OGTT secara berkala untuk memantau perkembangan kondisi." priority="urgent" />
-                      <RecommendationItem icon="🥗" title="Diet Rendah Gula" desc="Kurangi konsumsi karbohidrat sederhana dan gula. Prioritaskan sayuran, protein tanpa lemak, dan biji-bijian utuh." priority="high" />
-                      <RecommendationItem icon="🏃" title="Aktivitas Fisik" desc="Lakukan minimal 150 menit olahraga aerobik per minggu (jalan cepat, berenang, bersepeda)." priority="high" />
-                      <RecommendationItem icon="⚖️" title="Kontrol Berat Badan" desc="Targetkan penurunan berat badan 5-7% untuk mengurangi risiko diabetes secara signifikan." priority="medium" />
+                      <RecommendationItem icon="&#x1F3E5;" title="Konsultasi Dokter Segera" desc="Jadwalkan konsultasi dengan dokter spesialis endokrinologi untuk pemeriksaan lanjutan dan validasi diagnosis klinis." priority="urgent" />
+                      <RecommendationItem icon="&#x1FA78;" title="Tes Lanjutan" desc="Lakukan OGTT (Oral Glucose Tolerance Test), tes insulin, dan pemeriksaan fungsi ginjal." priority="urgent" />
+                      {input.FamilyHistoryDiabetes === 1 && (
+                        <RecommendationItem icon="&#x1F9EC;" title="Konseling Genetik" desc="Dengan riwayat diabetes keluarga, pertimbangkan konseling genetik dan skrining keluarga lainnya." priority="high" />
+                      )}
+                      <RecommendationItem icon="&#x1F957;" title="Diet Rendah Gula" desc="Kurangi karbohidrat sederhana. Prioritaskan sayuran, protein tanpa lemak, dan biji-bijian utuh." priority="high" />
+                      <RecommendationItem icon="&#x1F3C3;" title="Tingkatkan Aktivitas Fisik" desc="Lakukan minimal 150 menit olahraga aerobik per minggu." priority="high" />
+                      {input.BMI >= 25 && (
+                        <RecommendationItem icon="&#x2696;&#xFE0F;" title="Kontrol Berat Badan" desc={`BMI Anda ${input.BMI} (${input.BMI >= 30 ? "Obesitas" : "Overweight"}). Targetkan penurunan 5-7% BB.`} priority="medium" />
+                      )}
                     </>
                   ) : (
                     <>
-                      <RecommendationItem icon="✅" title="Pertahankan Gaya Hidup" desc="Profil kesehatan Anda baik. Pertahankan pola makan seimbang dan olahraga teratur." priority="low" />
-                      <RecommendationItem icon="📅" title="Pemeriksaan Berkala" desc="Lakukan pemeriksaan kesehatan komprehensif (medical check-up) setidaknya sekali dalam setahun." priority="medium" />
-                      <RecommendationItem icon="⚖️" title="Jaga BMI Ideal" desc="Pertahankan BMI antara 18.5 – 24.9 kg/m² dengan diet seimbang dan olahraga teratur." priority="low" />
-                      <RecommendationItem icon="🧬" title="Faktor Genetik" desc="Jika ada riwayat diabetes dalam keluarga, lakukan skrining lebih sering setelah usia 35 tahun." priority="medium" />
+                      <RecommendationItem icon="&#x2705;" title="Pertahankan Gaya Hidup" desc="Profil kesehatan Anda baik. Pertahankan pola makan seimbang dan olahraga teratur." priority="low" />
+                      <RecommendationItem icon="&#x1F4C5;" title="Pemeriksaan Berkala" desc="Lakukan medical check-up komprehensif setidaknya sekali dalam setahun." priority="medium" />
+                      {input.FamilyHistoryDiabetes === 1 && (
+                        <RecommendationItem icon="&#x1F9EC;" title="Perhatikan Faktor Genetik" desc="Dengan riwayat diabetes keluarga, lakukan skrining lebih sering setelah usia 35 tahun." priority="medium" />
+                      )}
+                      <RecommendationItem icon="&#x2696;&#xFE0F;" title="Jaga BMI Ideal" desc="Pertahankan BMI antara 18.5 - 24.9 kg/m&sup2;." priority="low" />
                     </>
                   )}
                 </div>
@@ -330,20 +396,22 @@ export default function ResultPage() {
         </div>
 
         {/* ─── DISCLAIMER ─── */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}>
           <div className="bg-sky-50 border border-sky-100 rounded-xl p-5 flex items-start gap-3 mb-8">
             <Info className="h-5 w-5 text-sky-500 mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-semibold text-sky-800">Peringatan Medis (Disclaimer)</p>
               <p className="text-xs text-sky-700 mt-1">
-                Hasil ini dihasilkan oleh model Machine Learning (Clinical Decision Support System) dan BUKAN merupakan diagnosis medis pasti. Sistem ini hanya alat bantu skrining preventif. Selalu konsultasikan hasil yang mengkhawatirkan dengan tenaga kesehatan profesional.
+                Hasil ini dihasilkan oleh model Machine Learning (Gradient Boosting, akurasi 94.2%) dan BUKAN merupakan diagnosis medis pasti.
+                Sistem ini menggunakan 28 parameter kesehatan berdasarkan standar klinis internasional sebagai alat bantu skrining preventif.
+                Selalu konsultasikan hasil yang mengkhawatirkan dengan tenaga kesehatan profesional.
               </p>
             </div>
           </div>
         </motion.div>
 
         {/* ─── ACTION BUTTONS ─── */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }}
           className="flex flex-col sm:flex-row justify-center gap-3"
         >
           <Button onClick={() => router.push("/predict")} variant="outline" className="gap-2 h-12 px-6 rounded-xl">
@@ -369,10 +437,10 @@ function RecommendationItem({ icon, title, desc, priority }: { icon: string; tit
   return (
     <div className={`border-l-4 ${borderColors[priority]} bg-slate-50 rounded-r-lg p-3`}>
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-lg">{icon}</span>
+        <span className="text-lg" dangerouslySetInnerHTML={{ __html: icon }} />
         <span className="text-sm font-semibold text-slate-800">{title}</span>
       </div>
-      <p className="text-xs text-slate-500 leading-relaxed pl-7">{desc}</p>
+      <p className="text-xs text-slate-500 leading-relaxed pl-7" dangerouslySetInnerHTML={{ __html: desc }} />
     </div>
   );
 }

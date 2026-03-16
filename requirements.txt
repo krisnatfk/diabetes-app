@@ -7,3 +7,4 @@ uvicorn
 supabase
 pydantic
 python-dotenv
+kagglehub
