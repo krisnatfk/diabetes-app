@@ -45,6 +45,5 @@ venv/
 __pycache__/
 *.pyc
 
-# ML models & datasets (too large for GitHub)
-/models/*.pkl
+# ML datasets (too large for GitHub)
 /ml/*.csv
