@@ -139,7 +139,6 @@ function RangeInput({
         placeholder={`${min} - ${max}`}
         value={value}
         onChange={onChange}
-        required
         className="h-11"
       />
       {hint && <p className="text-[11px] text-slate-400">{hint}</p>}
@@ -217,14 +216,14 @@ export default function PredictPage() {
     setFormData({ ...formData, [field]: value });
   };
 
-  const canProceed = () => {
+    const canProceed = () => {
     switch (step) {
       case 1:
         return formData.Age && formData.BMI;
       case 2:
         return true; // All toggles have defaults
       case 3:
-        return formData.HbA1c && formData.FastingBloodSugar;
+        return true; // Make clinical data optional, backend handles defaults
       case 4:
         return true; // defaults are fine
       case 5:

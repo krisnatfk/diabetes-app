@@ -166,10 +166,10 @@ def main():
             random_state=42, max_iter=2000, C=1.0
         ),
         "Random Forest": RandomForestClassifier(
-            random_state=42, n_estimators=200, max_depth=10, min_samples_split=5
+            random_state=42, n_estimators=100, max_depth=8, min_samples_split=5
         ),
         "Gradient Boosting": GradientBoostingClassifier(
-            random_state=42, n_estimators=200, max_depth=5, learning_rate=0.1
+            random_state=42, n_estimators=100, max_depth=3, learning_rate=0.1
         ),
     }
 

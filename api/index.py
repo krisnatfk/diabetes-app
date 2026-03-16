@@ -53,8 +53,10 @@ FEATURE_ORDER = [
 ]
 
 
+model_load_error = None
+
 def load_ml_assets():
-    global model, scaler, feature_config, model_info
+    global model, scaler, feature_config, model_info, model_load_error
     try:
         if model is None:
             model = joblib.load(MODEL_PATH)
@@ -65,6 +67,7 @@ def load_ml_assets():
                 model_info = joblib.load(MODEL_INFO_PATH)
             print("Models loaded successfully.")
     except Exception as e:
+        model_load_error = str(e)
         print(f"Error loading models: {e}")
 
 
@@ -232,11 +235,15 @@ def analyze_risk_factors(data: dict, probability: float):
 # ─── Endpoints ──────────────────────────────────────────────────
 @app.get("/api/")
 def read_root():
+    load_ml_assets()
     return {
         "status": "ok",
         "message": "Comprehensive Diabetes Prediction API is running.",
         "n_features": len(FEATURE_ORDER),
         "model_info": model_info if model_info else {},
+        "model_load_error": model_load_error,
+        "model_path_checked": MODEL_PATH,
+        "model_path_exists": os.path.exists(MODEL_PATH)
     }
 
 
@@ -244,7 +251,8 @@ def read_root():
 def predict_diabetes(data: HealthDataInput):
     load_ml_assets()
     if not model:
-        raise HTTPException(status_code=500, detail="Model not loaded. Please train the model first.")
+        error_detail = f"Model not loaded. Error: {model_load_error}. Path: {MODEL_PATH} (Exists: {os.path.exists(MODEL_PATH)})"
+        raise HTTPException(status_code=500, detail=error_detail)
 
     try:
         input_data = data.model_dump()
